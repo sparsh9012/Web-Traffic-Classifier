@@ -1,0 +1,18 @@
+#!/bin/bash
+
+rm -rf ./tcp_syn_flows
+mkdir ./tcp_syn_flows
+
+#--dont-drop-privileges
+output_path="./tcp_syn_flows/"
+format="%IPV4_SRC_ADDR %IPV4_DST_ADDR %IN_PKTS %OUT_PKTS %IN_BYTES %OUT_BYTES %PROTOCOL %ICMP_TYPE %TCP_FLAGS %L4_SRC_PORT %L4_DST_PORT %SRC_AS %DST_AS %FLOW_START_MILLISECONDS %FLOW_END_MILLISECONDS"
+
+# we keep the default values of nProbe
+lifetime_timeout=120 # default 120 seconds
+idle_timeout=30 # default 30 seconds
+
+pcaps=./caida_captures/traces/ddostrace.20070804_142436.pcap
+for p in $pcaps
+do
+    nprobe -V 9 -i $p --dont-nest-dump-dirs -P ${output_path} -T "${format}" -f "ip proto 6 && src host 195.58.5.16" -t ${lifetime_timeout} -d ${idle_timeout} -W -M 15000000
+done
