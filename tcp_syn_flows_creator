@@ -1,9 +1,9 @@
 #!/bin/bash
 
-rm -rf ./tcp_syn_flows
-mkdir ./tcp_syn_flows
+rm -rf ./tcp_syn_flood_flows
+mkdir ./tcp_syn_flood_flows
 
-output_path="./tcp_syn_flows/"
+output_path="./tcp_syn_flood_flows/"
 format="%IPV4_SRC_ADDR %IPV4_DST_ADDR %IN_PKTS %OUT_PKTS %IN_BYTES %OUT_BYTES %PROTOCOL %ICMP_TYPE %TCP_FLAGS %L4_SRC_PORT %L4_DST_PORT %SRC_AS %DST_AS %FLOW_START_MILLISECONDS %FLOW_END_MILLISECONDS"
 
 # we keep the default values of nProbe

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # we break the legitimate traffic pcap file(newcapture.pcap) into smaller ones which correspond to captures lasting 300 seconds
-rm -rf ./legit_traffic
-mkdir ./legit_traffic
-editcap -i 300 newcapture.pcap ./legit_traffic/legit_traffic.pcap
+#rm -rf ./legit_traffic
+#mkdir ./legit_traffic
+#editcap -i 300 newcapture.pcap ./legit_traffic/legit_traffic.pcap
 
 rm -rf ./legit_traffic_flows
 mkdir ./legit_traffic_flows
@@ -20,4 +20,3 @@ for p in $pcaps
 do
     nprobe -V 9 -i $p --dont-nest-dump-dirs -P ${output_path} -T "${format}" -t ${lifetime_timeout} -d ${idle_timeout} -W
 done
- 
