@@ -13,5 +13,5 @@ idle_timeout=30 # default 30 seconds
 pcaps=./caida_captures/traces/*
 for p in $pcaps
 do
-    nprobe -V 9 -i $p --dont-nest-dump-dirs -P ${output_path} -T "${format}" -f "ip proto 1" -t ${lifetime_timeout} -d ${idle_timeout} -W
+    nprobe -V 9 -i $p --dont-nest-dump-dirs -P ${output_path} -T "${format}" -f "ip proto 1 && dst host 71.126.222.64" -t ${lifetime_timeout} -d ${idle_timeout} -W
 done
