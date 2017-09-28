@@ -14,12 +14,13 @@ import numpy as np
 np.random.seed(123)
 
 
-def write_results(filename, cells_per_layer, acc):
+def write_results(filename, hidden_layers, cells_per_layer, val_acc, val_loss, acc, loss):
     out_file = open(filename, 'a')
 
-    out_file.write(cells_per_layer+"|"+acc)
+    out_file.write(hidden_layers+"|"+cells_per_layer+"|"+val_acc+"|"+acc+"|"+val_loss+"|"+loss)
     out_file.write("\n")
     out_file.close()
+
 
 if len(sys.argv)==1:
     (x, y, samples) = create_block_input(50000, 1, True, True, True, True, True)
@@ -32,10 +33,15 @@ elif len(sys.argv)==3:
     x = np.array(inp)
     y = np.array(output)
     
-#find data scale and normalize data
+# find and save data scale and normalize data
 scale,xmin = pre_normalization(x)
 x = normalize(x, scale, xmin)
-    
+
+dataset_name = "all_attacks"
+models_path = "./models/MLP/" + dataset_name + "/"
+filename = models_path + dataset_name + "_settings"
+np.savez(filename, data_scale=scale, data_min=xmin)
+
 input_num = len(x[0])
 X = np.reshape(x,(samples, input_num))
 Y = to_categorical(y, num_classes=5)
@@ -46,37 +52,44 @@ Y = to_categorical(y, num_classes=5)
 #x = results.Y
 
 # create MLP model
-cells_per_layer = 30
+cells_per_layer_list = [5, 10, 20, 30]
+hidden_layers_list = [1, 2, 3, 4]
+batch_len = 1
 
-model = Sequential()
-model.add(Dense(cells_per_layer, input_shape=X.shape[1:], activation='relu'))
-#model.add(Dropout)
-model.add(Dense(5, activation='softmax'))
+for hidden_layers in hidden_layers_list:
+    for cells_per_layer in cells_per_layer_list:
+        # create sequential model and add input and first hidden layer
+        model = Sequential()
+        model.add(Dense(cells_per_layer, input_shape=X.shape[1:], activation='relu'))
+    
+        # add extra hidden layers
+        for i in range(hidden_layers-1):
+            model.add(Dense(cells_per_layer, activation='relu'))
 
-# set model name and plot model
-name = "MLP"
-model.summary()
-plot_model(model, to_file=name + ".png", show_shapes=True)
+        # add output layer
+        model.add(Dense(5, activation='softmax'))
 
-# set training method
-sgd = SGD(lr=0.01)
-model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        # set model name and plot model
+        name = "MLP" + "_hidLayers=" + str(hidden_layers) + "_cellsPerLayer=" + str(cells_per_layer) + "_Dataset=" + dataset_name
+        model.summary()
+        ####plot_model(model, to_file=name + ".png", show_shapes=True)
+    
+        # set training method
+        train_method = "SGD=0,01"
+        sgd = SGD(lr=0.01)
+        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-# create callback that saves metrics during training
-history = History()
+        # train MlP model
+        hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=10, callbacks=[History()])
 
-# train MlP model
-hist = model.fit(X, Y, validation_split=0.2, batch_size=1, epochs=10, callbacks=[history])
+        # print results
+        #print(hist.history['acc'])
+        #print(X[1:6])
+        #print(model.predict(X[1:6], batch_size=1))
 
-# print results
-#print(hist.history['acc'])
-#print(X[1:6])
-#print(model.predict(X[1:6], batch_size=1))
-
-# save model and settings
-model.save("./models/" + name + ".h5")
-filename = "./models/" + name + "_settings"
-np.savez(filename, data_scale=scale, data_min=xmin)
-
-# save results
-write_results("./results/MLP_acc.txt", str(cells_per_layer), str(hist.history['val_acc'][-1]))
+        # save model
+        model.save(models_path + name + "_" + train_method + ".h5")
+    
+        # save results
+        results_file = "./results/MLP, " + dataset_name + ", " + train_method + ".txt"
+        write_results(results_file, str(hidden_layers), str(cells_per_layer), str(hist.history['val_acc'][-1]), str(hist.history['acc'][-1]), str(hist.history['val_loss'][-1]), str(hist.history['loss'][-1]))
