@@ -15,7 +15,7 @@ np.random.seed(123)
 
 
 if len(sys.argv)==1:
-    (x, y, samples) = create_block_input(50000, 10000, True, True, True, True, True)
+    (x, y, samples) = create_block_input(50000, 1, False, False, False, False, True)
 elif len(sys.argv)==3:
     x_file = str(sys.argv[1])
     y_file = str(sys.argv[2])
@@ -26,7 +26,7 @@ elif len(sys.argv)==3:
     y = np.array(output)
 
 #load data scale and normalize data
-filename = "./models/RNN/all_attacks/all_attacks_settings.npz"
+filename = "./models/RNN/all_attacks_rand_pattern_settings.npz"
 #in_file = open(filename, 'r')
 #col = in_file.readline().split(",")
 #scale = float(col[0]))
@@ -39,15 +39,15 @@ X = np.reshape(x,(samples, 1, input_num))
 Y = to_categorical(y, num_classes=5)
 
 #load model
-model = load_model("./models/RNN/all_attacks/RNN_hidLayers=2_cellsPerLayer=20_Dataset=all_attacks_SGD=0,01.h5")
+model = load_model("./models/RNN/RNN_hidLayers=2_cellsPerLayer=20_Dataset=all_attacks_rand_pattern_SGD=0,01.h5")
 
-score = model.evaluate(X, Y, batch_size=5, verbose=1)
+score = model.evaluate(X, Y, batch_size=1, verbose=1)
 
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
 
-d = model.predict_classes(X[0:15], batch_size = 5)
+d = model.predict_classes(X[0:1000], batch_size = 1)
 
 
 print(d)

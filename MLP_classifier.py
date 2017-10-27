@@ -1,6 +1,6 @@
 from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout, Activation
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adagrad, RMSprop
 from keras.utils.np_utils import to_categorical
 from keras.utils.vis_utils import plot_model
 from keras.callbacks import History
@@ -37,9 +37,13 @@ elif len(sys.argv)==3:
 scale,xmin = pre_normalization(x)
 x = normalize(x, scale, xmin)
 
-dataset_name = "all_attacks"
-models_path = "./models/MLP/" + dataset_name + "/"
-filename = models_path + dataset_name + "_settings"
+dataset_name = "all_attacks(aggregation)"
+train_method = "SGD=0,01"
+#train_method = "AdaGrad=0,01"
+#train_method = "RMSProp=0,001"
+dropout = "Dropout=0,4"
+models_path = "./models/MLP/"+ dataset_name + "/" + train_method + "/"
+filename = models_path + dataset_name +"_"+train_method+"_"+ dropout +"_settings"
 np.savez(filename, data_scale=scale, data_min=xmin)
 
 input_num = len(x[0])
@@ -55,16 +59,19 @@ Y = to_categorical(y, num_classes=5)
 cells_per_layer_list = [5, 10, 20, 30]
 hidden_layers_list = [1, 2, 3, 4]
 batch_len = 1
+drop_rate = 0.4
 
 for hidden_layers in hidden_layers_list:
     for cells_per_layer in cells_per_layer_list:
         # create sequential model and add input and first hidden layer
         model = Sequential()
         model.add(Dense(cells_per_layer, input_shape=X.shape[1:], activation='relu'))
-    
+        model.add(Dropout(drop_rate))
+
         # add extra hidden layers
         for i in range(hidden_layers-1):
             model.add(Dense(cells_per_layer, activation='relu'))
+            model.add(Dropout(drop_rate))
 
         # add output layer
         model.add(Dense(5, activation='softmax'))
@@ -75,8 +82,9 @@ for hidden_layers in hidden_layers_list:
         ####plot_model(model, to_file=name + ".png", show_shapes=True)
     
         # set training method
-        train_method = "SGD=0,01"
         sgd = SGD(lr=0.01)
+        adagrad = Adagrad(lr=0.01, epsilon=1e-08, decay=0.0)
+        rmsprop = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
         # train MlP model
@@ -88,8 +96,8 @@ for hidden_layers in hidden_layers_list:
         #print(model.predict(X[1:6], batch_size=1))
 
         # save model
-        model.save(models_path + name + "_" + train_method + ".h5")
+        model.save(models_path + name + "_" + train_method + "_" + dropout + ".h5")
     
         # save results
-        results_file = "./results/MLP, " + dataset_name + ", " + train_method + ".txt"
+        results_file = "./results/MLP, " + dataset_name + ", " + train_method + ", " + dropout + ".txt"
         write_results(results_file, str(hidden_layers), str(cells_per_layer), str(hist.history['val_acc'][-1]), str(hist.history['acc'][-1]), str(hist.history['val_loss'][-1]), str(hist.history['loss'][-1]))

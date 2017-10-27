@@ -25,7 +25,7 @@ def write_results(filename, hidden_layers, cells_per_layer, val_acc, val_loss, a
 
 
 if len(sys.argv)==1:
-    (x, y, samples) = create_block_input(50000, 1, True, True, True, True, True)
+    (x, y, samples) = create_input_rand_pattern(10000, True, True, True, True, True)
 elif len(sys.argv)==3:
     x_file = str(sys.argv[1])
     y_file = str(sys.argv[2])
@@ -39,8 +39,8 @@ elif len(sys.argv)==3:
 scale,xmin = pre_normalization(x)
 x = normalize(x, scale, xmin)
 
-dataset_name = "all_attacks"
-models_path = "./models/RNN/" + dataset_name + "/"
+dataset_name = "all_attacks_rand_pattern"
+models_path = "./models/RNN/" #### + dataset_name + "/"
 filename = models_path + dataset_name + "_settings"
 np.savez(filename, data_scale=scale, data_min=xmin)
 
@@ -56,7 +56,8 @@ Y = to_categorical(y, num_classes=5)
 # create RNN model
 cells_per_layer_list = [20]
 hidden_layers_list = [2]
-batch_len = 5
+batch_len = 1
+epoch_num = 10
 
 for hidden_layers in hidden_layers_list:
     for cells_per_layer in cells_per_layer_list:
@@ -66,7 +67,7 @@ for hidden_layers in hidden_layers_list:
         if(hidden_layers!=1):
             model.add(SimpleRNN(cells_per_layer, input_shape=(1,input_num), batch_input_shape=(batch_len,1,input_num), recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', return_sequences=True, stateful=True))
         else:
-            model.add(SimpleRNN(cells_per_layer, input_shape=(1,input_num), batch_input_shape=(batch_len,1,input_num), recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', statefull=True))
+            model.add(SimpleRNN(cells_per_layer, input_shape=(1,input_num), batch_input_shape=(batch_len,1,input_num), recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', stateful=True))
 
         # add extra hidden layers
         for i in range(hidden_layers - 1):
@@ -90,9 +91,9 @@ for hidden_layers in hidden_layers_list:
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
         # train RNN model
-        #hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=15, verbose=1, callbacks=[History()], shuffle=True)
+        #hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=epoch_num, verbose=1, callbacks=[History()], shuffle=False)
 
-        for i in range(1, 10+1):
+        for i in range(1, epoch_num+1):
             hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=1, verbose=1, callbacks=[History()], shuffle=False)
             model.reset_states()
 
@@ -106,4 +107,4 @@ for hidden_layers in hidden_layers_list:
     
         # save results
         results_file = "./results/RNN, " + dataset_name + ", " + train_method + ".txt"
-        ####write_results(results_file, str(hidden_layers), str(cells_per_layer), str(hist.history['val_acc'][-1]), str(hist.history['acc'][-1]), str(hist.history['val_loss'][-1]), str(hist.history['loss'][-1]))
+        write_results(results_file, str(hidden_layers), str(cells_per_layer), str(hist.history['val_acc'][-1]), str(hist.history['acc'][-1]), str(hist.history['val_loss'][-1]), str(hist.history['loss'][-1]))

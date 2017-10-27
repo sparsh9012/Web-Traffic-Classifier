@@ -1,7 +1,7 @@
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 from os import walk
-
+import random
 
 def create_dataset(path):
 
@@ -146,17 +146,17 @@ def create_dataset(path):
                 # final data format: [protocol flags, number of incoming packets, number of outgoing packets, average bytes of an incoming packet, average bytes of an outgoing packet, src_port, dst_port, tcp_flags, icmp_code, duration, total number of packets from source ip to L4 dst port for all the flows, flag that indicates if source ASN is 3323, flag that indicates if destination ASN is 3323]
 
                 # data with no aggregation
-                data.append( prot_flag[-1] + packets_in[-1] + packets_out[-1] + packet_in_bytes[-1] + packet_out_bytes[-1] + src_port[-1] + dst_port[-1] + tcp_flags[-1] + icmp_code_flags[-1] + duration[-1] + [src_AS[-1], dst_AS[-1]] )
+                #data.append( prot_flag[-1] + packets_in[-1] + packets_out[-1] + packet_in_bytes[-1] + packet_out_bytes[-1] + src_port[-1] + dst_port[-1] + tcp_flags[-1] + icmp_code_flags[-1] + duration[-1] + [src_AS[-1], dst_AS[-1]] )
 
                 # data with no aggregation and no outgoing fields
                 #data.append( prot_flag[-1] + packets_in[-1] + packet_in_bytes[-1] + src_port[-1] + dst_port[-1] + tcp_flags[-1] + icmp_code_flags[-1] + duration[-1] + [src_AS[-1], dst_AS[-1]] )
 
     # data with aggregation and no outgoing packets
-    #for i in range(len(prot_flag)):
+    for i in range(len(prot_flag)):
         #data.append( prot_flag[i] + packets_in[i] + packet_in_bytes[i] + src_port[i] + dst_port[i] + tcp_flags[i] + icmp_code_flags[i] + duration[i] + [ip_dstport[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]]  + [src_AS[i], dst_AS[i]] )
 
         # data with aggregation but also outgoing fields
-        #data.append( prot_flag[i] + packets_in[i] + packets_out[i] + packet_in_bytes[i] + packet_out_bytes[i] + src_port[i] + dst_port[i] + tcp_flags[i] + icmp_code_flags[i] + duration[i] + [ip_dstport[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]] + [ip_dstport_ret[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]] + [src_AS[i], dst_AS[i]] )
+        data.append( prot_flag[i] + packets_in[i] + packets_out[i] + packet_in_bytes[i] + packet_out_bytes[i] + src_port[i] + dst_port[i] + tcp_flags[i] + icmp_code_flags[i] + duration[i] + [ip_dstport[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]] + [ip_dstport_ret[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]] + [src_AS[i], dst_AS[i]] )
 
 
 ####[ip_dstport[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]]
@@ -182,6 +182,68 @@ def normalize(x, scale, xmin):
     x_norm = (x-xmin)/(scale)
     return x_norm
 
+def create_input_rand_pattern(samples_per_categ, check_icmp, check_tcp, check_udp, check_ps, check_lg):
+    icmp_flood_data = create_dataset("./icmp_flood_flows/")
+    tcp_syn_flood_data = create_dataset("./tcp_syn_flood_flows/")
+    udp_flood_data = create_dataset("./udp_flood_flows/")
+    port_scan_data = create_dataset("./port_scan_flows/")
+    legit_data = create_dataset("./legit_traffic_flows/")
+    
+    inp = []
+    out = []
+
+    legit = 0
+    icmp = 0
+    tcp = 0
+    udp = 0
+    ps = 0
+
+    if (check_icmp):
+        for i in range(0, samples_per_categ):
+            out.append([1])
+    if (check_tcp):
+        for i in range(0, samples_per_categ):
+            out.append([2])
+    if (check_udp):
+        for i in range(0, samples_per_categ):
+            out.append([3])
+    if (check_ps):
+        for i in range(0, samples_per_categ):
+            out.append([4])
+    if (check_lg):
+        for i in range(0, samples_per_categ):
+            out.append([0])
+
+    #print(out)
+    random.shuffle(out)
+    #print(out)
+
+    for i in range(0, len(out)):
+        if(out[i]==[1]):
+            inp.append(icmp_flood_data[icmp])
+            icmp = icmp + 1
+        if(out[i]==[2]):
+            inp.append(tcp_syn_flood_data[tcp])
+            tcp = tcp + 1
+        if(out[i]==[3]):
+            inp.append(udp_flood_data[udp])
+            udp = udp + 1
+        if(out[i]==[4]):
+            inp.append(port_scan_data[ps])
+            ps = ps + 1
+        if(out[i]==[0]):
+            inp.append(legit_data[legit])
+            legit = legit + 1
+
+    samples = icmp + tcp + udp + ps + legit # total number of samples
+
+    write_to_file("./data/data_all_attacks_rand_pattern.txt", inp, samples, 1)
+    write_to_file("./data/labels_all_attacks_rand_pattern.txt", out,  samples, 1)
+
+    x = np.array(inp)
+    y = np.array(out)
+    
+    return (x, y, samples)
 
 def create_block_input(sample_length, sequence_length, check_icmp, check_tcp, check_udp, check_ps, check_lg):
     icmp_flood_data = create_dataset("./icmp_flood_flows/")
@@ -233,8 +295,8 @@ def create_block_input(sample_length, sequence_length, check_icmp, check_tcp, ch
     
     samples = icmp + tcp + udp + port_scan + legit # total number of samples
 
-    write_to_file("./data/data_all_attacks.txt", inp, samples, seq_len)
-    write_to_file("./data/labels_all_attacks.txt", output,  samples, 1)
+    write_to_file("./data/data_all_attacks(aggregation).txt", inp, samples, seq_len)
+    write_to_file("./data/labels_all_attacks(aggregation).txt", output,  samples, 1)
 
     x = np.array(inp)
     y = np.array(output)

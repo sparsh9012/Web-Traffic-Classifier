@@ -15,7 +15,7 @@ np.random.seed(123)
 
 
 if len(sys.argv)==1:
-    (x, y, samples) = create_block_input(50000, 100, False, True, False, True, True)
+    (x, y, samples) = create_block_input(50000, 1, False, True, False, True, False)
 elif len(sys.argv)==3:
     x_file = str(sys.argv[1])
     y_file = str(sys.argv[2])

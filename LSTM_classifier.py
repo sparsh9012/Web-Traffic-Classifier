@@ -1,9 +1,12 @@
-from keras.models import Sequential, load_model
+from keras.models import Sequential
 from keras.layers import Dense, Activation, LSTM
-from keras.optimizers import SGD
+
+from keras import initializers
+
+from keras.optimizers import SGD, RMSprop
 from keras.utils.np_utils import to_categorical
 from keras.utils.vis_utils import plot_model
-
+from keras.callbacks import History
 
 from matplotlib.mlab import PCA
 
@@ -14,8 +17,16 @@ import numpy as np
 np.random.seed(123)
 
 
+def write_results(filename, hidden_layers, cells_per_layer, val_acc, val_loss, acc, loss):
+    out_file = open(filename, 'a')
+
+    out_file.write(hidden_layers+"|"+cells_per_layer+"|"+val_acc+"|"+acc+"|"+val_loss+"|"+loss)
+    out_file.write("\n")
+    out_file.close()
+
+
 if len(sys.argv)==1:
-    (x, y, samples) = create_block_input(50000, 1, True, True, True, True, True)
+    (x, y, samples) = create_input_rand_pattern(10000, True, True, True, True, True)
 elif len(sys.argv)==3:
     x_file = str(sys.argv[1])
     y_file = str(sys.argv[2])
@@ -28,39 +39,72 @@ elif len(sys.argv)==3:
 #find data scale and normalize data
 scale,xmin = pre_normalization(x)
 x = normalize(x, scale, xmin)
-    
+
+dataset_name = "all_attacks_rand_pattern"
+models_path = "./models/LSTM/" #### + dataset_name + "/"
+filename = models_path + dataset_name + "_settings"
+np.savez(filename, data_scale=scale, data_min=xmin)
+
 input_num = len(x[0])
 X = np.reshape(x,(samples, 1, input_num))
 Y = to_categorical(y, num_classes=5)
 
+# code used for PCA analysis
 #data = x[:, np.apply_along_axis(np.count_nonzero, 0, x) > 0]
 #results = PCA(data)
 #x = results.Y
 
+# create LSTM model
+cells_per_layer_list = [5, 10, 20, 30]
+hidden_layers_list = [1, 2, 3, 4]
+batch_len = 1
+epoch_num = 10
 
+for hidden_layers in hidden_layers_list:
+    for cells_per_layer in cells_per_layer_list:
+        # create sequential model and add input and first hidden layer
+        model = Sequential()
 
-model = Sequential()
-model.add(LSTM(10, input_shape=X.shape[1:], batch_input_shape=(1,1,input_num), stateful=True, return_sequences = True))
-model.add(LSTM(10))
-model.add(Dense(5))
-model.add(Activation('softmax'))
+        if(hidden_layers!=1):
+            model.add(LSTM(cells_per_layer, input_shape=(1, input_num), batch_input_shape=(batch_len,1,input_num), recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', return_sequences = True, stateful=True))
+        else:
+            model.add(LSTM(cells_per_layer, input_shape=(1, input_num), batch_input_shape=(batch_len,1,input_num), recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', stateful=True))
 
-model.summary()
-plot_model(model, to_file="LSTM_50.png", show_shapes=True)
+        # add extra hidden layers
+        for i in range(hidden_layers - 1):
+            if(i!=hidden_layers-2): # add the rest hidden layers except the last
+                model.add(LSTM(cells_per_layer, recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', return_sequences = True, stateful=True))
+            else: # add the last hidden layer
+                model.add(LSTM(cells_per_layer, recurrent_initializer='random_uniform', kernel_initializer='random_uniform', activation='tanh', stateful=True))
 
-sgd = SGD(lr=0.01)
-model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+# add output layer
+        model.add(Dense(5, kernel_initializer='uniform', activation = 'softmax'))
 
+        # set model name and plot model
+        name = "LSTM" + "_hidLayers=" + str(hidden_layers) + "_cellsPerLayer=" + str(cells_per_layer) + "_Dataset=" + dataset_name
+        model.summary()
+        ####plot_model(model, to_file=name + ".png", show_shapes=True)
+        
+        # set training method
+        train_method = "SGD=0,01"
+        sgd = SGD(lr=0.01)
+        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-model.fit(X, Y, validation_split=0.2, batch_size=1, epochs=10, verbose=1)
-#print(X[1:6])
-#print(model.predict(X[1:6], batch_size=1))
+        # train LSTM model
+        #hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=epoch_num, verbose=1, callbacks=[History()], shuffle=False)
 
+        for i in range(1, epoch_num+1):
+            hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=1, verbose=1, callbacks=[History()], shuffle=False)
+            model.reset_states()
 
+        # print results
+        #print(hist.history['acc'])
+        #print(X[1:6])
+        #print(model.predict(X[1:6], batch_size=1))
 
-model.save("./models/model.h5")
-filename = "./models/settings"
-np.savez(filename, data_scale=scale, data_min=xmin)
-#out_file = open(filename, 'w')
-#out_file.write(str(scale) + "," + str(xmin)) #write scale,xmin
+        # save model
+        model.save(models_path + name + "_" + train_method + ".h5")
 
+        # save results
+        results_file = "./results/LSTM, " + dataset_name + ", " + train_method + ".txt"
+        write_results(results_file, str(hidden_layers), str(cells_per_layer), str(hist.history['val_acc'][-1]), str(hist.history['acc'][-1]), str(hist.history['val_loss'][-1]), str(hist.history['loss'][-1]))
