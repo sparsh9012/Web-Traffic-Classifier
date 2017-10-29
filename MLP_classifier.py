@@ -38,13 +38,13 @@ scale,xmin = pre_normalization(x)
 x = normalize(x, scale, xmin)
 
 dataset_name = "all_attacks(aggregation)"
-train_method = "SGD=0,01"
-#train_method = "AdaGrad=0,01"
+#train_method = "SGD=0,01"
+train_method = "AdaGrad=0,01"
 #train_method = "RMSProp=0,001"
-dropout = "Dropout=0,4"
+dropout = "Dropout=0"
 models_path = "./models/MLP/"+ dataset_name + "/" + train_method + "/"
 filename = models_path + dataset_name +"_"+train_method+"_"+ dropout +"_settings"
-np.savez(filename, data_scale=scale, data_min=xmin)
+#np.savez(filename, data_scale=scale, data_min=xmin)
 
 input_num = len(x[0])
 X = np.reshape(x,(samples, input_num))
@@ -58,8 +58,8 @@ Y = to_categorical(y, num_classes=5)
 # create MLP model
 cells_per_layer_list = [5, 10, 20, 30]
 hidden_layers_list = [1, 2, 3, 4]
-batch_len = 1
-drop_rate = 0.4
+batch_len = 32
+drop_rate = 0
 
 for hidden_layers in hidden_layers_list:
     for cells_per_layer in cells_per_layer_list:
@@ -82,13 +82,13 @@ for hidden_layers in hidden_layers_list:
         ####plot_model(model, to_file=name + ".png", show_shapes=True)
     
         # set training method
-        sgd = SGD(lr=0.01)
+        sgd = SGD(lr=0.001)
         adagrad = Adagrad(lr=0.01, epsilon=1e-08, decay=0.0)
         rmsprop = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
-        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer=adagrad, metrics=['accuracy'])
 
         # train MlP model
-        hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=10, callbacks=[History()])
+        hist = model.fit(X, Y, validation_split=0.2, batch_size=batch_len, epochs=10, callbacks=[History()], shuffle=False)
 
         # print results
         #print(hist.history['acc'])

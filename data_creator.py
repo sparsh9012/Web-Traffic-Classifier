@@ -151,6 +151,9 @@ def create_dataset(path):
                 # data with no aggregation and no outgoing fields
                 #data.append( prot_flag[-1] + packets_in[-1] + packet_in_bytes[-1] + src_port[-1] + dst_port[-1] + tcp_flags[-1] + icmp_code_flags[-1] + duration[-1] + [src_AS[-1], dst_AS[-1]] )
 
+                # data with progressive aggregation
+                #data.append( prot_flag[-1] + packets_in[-1] + packets_out[-1] + packet_in_bytes[-1] + packet_out_bytes[-1] + src_port[-1] + dst_port[-1] + tcp_flags[-1] + icmp_code_flags[-1] + duration[-1] + [ip_dstport[src_ip[-1], dst_ip[-1], prot_num[-1], dst_port_num[-1]]] + [ip_dstport_ret[src_ip[-1], dst_ip[-1], prot_num[-1], dst_port_num[-1]]] + [src_AS[-1], dst_AS[-1]] )
+
     # data with aggregation and no outgoing packets
     for i in range(len(prot_flag)):
         #data.append( prot_flag[i] + packets_in[i] + packet_in_bytes[i] + src_port[i] + dst_port[i] + tcp_flags[i] + icmp_code_flags[i] + duration[i] + [ip_dstport[src_ip[i], dst_ip[i], prot_num[i], dst_port_num[i]]]  + [src_AS[i], dst_AS[i]] )
@@ -295,8 +298,8 @@ def create_block_input(sample_length, sequence_length, check_icmp, check_tcp, ch
     
     samples = icmp + tcp + udp + port_scan + legit # total number of samples
 
-    write_to_file("./data/data_all_attacks(aggregation).txt", inp, samples, seq_len)
-    write_to_file("./data/labels_all_attacks(aggregation).txt", output,  samples, 1)
+    write_to_file("./data/eee.txt", inp, samples, seq_len)
+    write_to_file("./data/ee.txt", output,  samples, 1)
 
     x = np.array(inp)
     y = np.array(output)
